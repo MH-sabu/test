@@ -1,0 +1,51 @@
+dist: xenial
+language: python
+sudo: false
+python:
+  - "3.6"
+  - "3.7"
+
+cache:
+  pip: true
+  directories:
+    - node_modules
+    - $HOME/.cache/pip
+install:
+  - pip install -U pip setuptools wheel
+  - pip install tox-travis
+  - >
+    if [ ! -z "$DJANGO" ]; then
+      nvm install 10 \
+        && npm i \
+        && npm run build-assets --production \
+        && npm run build-emails
+    fi
+script:
+  - >
+    if [ ! -z "$DJANGO" ]; then
+      npm run test
+    fi
+  - tox
+env:
+  global:
+    - DATABASE_URL="postgres://postgres@localhost:5432/saleor"
+    - SECRET_KEY="irrelevant"
+  matrix:
+  - DJANGO="2.2"
+  - DJANGO="master"
+matrix:
+  fast_finish: true
+  include:
+    - env: TOXENV=black
+      python: "3.6"
+    - env: TOXENV=flake8
+      python: "3.6"
+  allow_failures:
+    - python: "3.6"
+      env: DJANGO="master"
+    - python: "3.7"
+      env: DJANGO="master"
+services:
+  - postgresql
+addons:
+  postgresql: 9.4
